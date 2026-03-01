@@ -130,6 +130,17 @@ analyzeBtn.addEventListener("click", async () => {
   }
 });
 
+// Helper: convert a therapy plan item (object or string) to a display string
+function planItemText(item) {
+  if (typeof item === 'string') return item;
+  if (item && typeof item === 'object') {
+    const name = item.technique || item.name || item.title || 'Intervention';
+    const desc = item.description || item.rationale || '';
+    return desc ? `${name}: ${desc}` : name;
+  }
+  return String(item);
+}
+
 function showScreeningResults(d) {
   if (!d) return;
   const panel = document.getElementById("screeningResults");
@@ -159,7 +170,8 @@ function showScreeningResults(d) {
   if (d.therapy && d.therapy.plan) {
     d.therapy.plan.forEach((item, i) => {
       const priority = d.therapy.priorities[i] || "Low";
-      tEl.innerHTML += `<div class="therapy-item"><span class="priority-dot ${priority.toLowerCase()}"></span>${item}</div>`;
+      const text = planItemText(item);
+      tEl.innerHTML += `<div class="therapy-item"><span class="priority-dot ${priority.toLowerCase()}"></span>${text}</div>`;
     });
   }
 }
@@ -255,7 +267,8 @@ function showQuestResults(d) {
   if (d.therapy && d.therapy.plan) {
     d.therapy.plan.forEach((item, i) => {
       const priority = d.therapy.priorities[i] || "Low";
-      tEl.innerHTML += `<div class="therapy-item"><span class="priority-dot ${priority.toLowerCase()}"></span>${item}</div>`;
+      const text = planItemText(item);
+      tEl.innerHTML += `<div class="therapy-item"><span class="priority-dot ${priority.toLowerCase()}"></span>${text}</div>`;
     });
   }
 }
@@ -295,7 +308,7 @@ function updateDashboard(d) {
   }
   if (d.therapy) {
     const thMsg = d.therapy.plan && d.therapy.plan.length
-      ? `"${d.therapy.plan.length} intervention${d.therapy.plan.length > 1 ? 's' : ''} recommended. Focus: ${d.therapy.plan[0].substring(0, 60)}..."`
+      ? `"${d.therapy.plan.length} intervention${d.therapy.plan.length > 1 ? 's' : ''} recommended. Focus: ${planItemText(d.therapy.plan[0]).substring(0, 60)}..."`
       : '"No specific interventions needed at this time."';
     document.getElementById("agentTherapyInsight").textContent = thMsg;
   }
@@ -631,7 +644,8 @@ function refreshTherapy() {
   let html = "";
   t.plan.forEach((item, i) => {
     const priority = t.priorities[i] || "Low";
-    const itemLower = item.toLowerCase();
+    const text = planItemText(item);
+    const itemLower = text.toLowerCase();
 
     // Filter by domain
     if (activeDomain !== "all") {
@@ -649,10 +663,10 @@ function refreshTherapy() {
         <div class="therapy-checkbox" onclick="this.classList.toggle('checked')"></div>
         <div class="therapy-check-body">
           <div class="therapy-check-title">
-            ${item.split(":")[0] || item}
+            ${text.split(":")[0] || text}
             <span class="priority-badge ${priority.toLowerCase()}">${priority}</span>
           </div>
-          <div class="therapy-check-desc">${item.includes(":") ? item.split(":").slice(1).join(":").trim() : "AI-recommended intervention based on screening indicators."}</div>
+          <div class="therapy-check-desc">${text.includes(":") ? text.split(":").slice(1).join(":").trim() : "AI-recommended intervention based on screening indicators."}</div>
         </div>
       </div>`;
   });
@@ -816,7 +830,7 @@ function refreshReport() {
   if (d.therapy && d.therapy.plan) {
     d.therapy.plan.forEach((item, i) => {
       const p = d.therapy.priorities[i] || "Low";
-      lines.push(`  [${p}] ${item}`);
+      lines.push(`  [${p}] ${planItemText(item)}`);
     });
   }
   lines.push("");
