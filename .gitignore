@@ -43,6 +43,6 @@ desktop.ini
 *.swo
 
 # ── Dist / build ──
-dist/
+# dist/ is committed for Render deployment (React build)
 build/
 *.egg-info/
