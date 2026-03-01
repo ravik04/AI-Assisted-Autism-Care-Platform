@@ -546,8 +546,22 @@ def clear_history():
     return {"status": "cleared"}
 
 
+# ── Serve frontend (for single-origin deployment on Render, etc.) ──────
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+FRONTEND_DIR = os.path.join(PROJECT_DIR, "frontend")
+if os.path.isdir(FRONTEND_DIR):
+    @app.get("/")
+    async def serve_index():
+        return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+
+    app.mount("/", StaticFiles(directory=FRONTEND_DIR), name="frontend")
+
+
 # ── Run directly ───────────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
-    print("\n  → API docs at http://localhost:8000/docs\n")
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
+    port = int(os.environ.get("PORT", 8000))
+    print(f"\n  → API docs at http://localhost:{port}/docs\n")
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)

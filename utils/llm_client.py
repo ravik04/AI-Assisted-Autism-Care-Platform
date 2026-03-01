@@ -10,9 +10,11 @@ import json
 import time
 from typing import Optional, Dict, Any
 
-# Load .env file (OPENAI_API_KEY)
+# Load .env file (OPENAI_API_KEY) — check project root, then parent
 from dotenv import load_dotenv
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
+_project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(os.path.join(_project_root, ".env"))           # inside project
+load_dotenv(os.path.join(_project_root, "..", ".env"))     # parent (AutismCare/)
 
 # Try to import openai
 try:

@@ -5,7 +5,9 @@
    signal breakdown, gradient progress chart
    ══════════════════════════════════════════════════════════════════════ */
 
-const API = "http://localhost:8000";
+const API = window.location.hostname === "localhost"
+  ? "http://localhost:8000"
+  : "";  // same origin on Render
 
 // ── State ─────────────────────────────────────────────────────────────
 let latestResult = null;

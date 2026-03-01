@@ -14,10 +14,9 @@ __pycache__/
 .env.*
 !.env.example
 
-# ── Saved ML models (too large for GitHub) ──
-saved_models/*.keras
-saved_models/*.pkl
-saved_models/*.h5
+# ── Saved ML models ──
+# Included in repo (all under 25MB each) for deployment
+# If models grow too large, use Git LFS instead
 
 # ── Logs & temp ──
 *.log
