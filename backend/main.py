@@ -113,6 +113,33 @@ def _save_users(users):
 def _hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
+def _seed_default_users():
+    """Pre-seed sample accounts so they survive Render redeploys."""
+    users = _load_users()
+    defaults = [
+        {"email": "ravik@parent.com", "name": "Ravi K", "role": "parent", "password": "ravik123"},
+        {"email": "ravik@clinician.com", "name": "Ravi K", "role": "clinician", "password": "ravik123"},
+        {"email": "ravik@therapist.com", "name": "Ravi K", "role": "therapist", "password": "ravik123"},
+    ]
+    changed = False
+    for d in defaults:
+        if d["email"] not in users:
+            users[d["email"]] = {
+                "id": secrets.token_hex(4),
+                "name": d["name"],
+                "email": d["email"],
+                "role": d["role"],
+                "password_hash": _hash_password(d["password"]),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }
+            changed = True
+    if changed:
+        _save_users(users)
+        print(f"  ✓ Seeded {len(defaults)} default user accounts")
+
+# Seed accounts at import time (before server starts)
+_seed_default_users()
+
 def _create_token(user_id: str, name: str, email: str, role: str) -> str:
     payload = {
         "user_id": user_id,
@@ -1100,7 +1127,7 @@ if os.path.isdir(FRONTEND_DIR):
     # Serve static assets (js, css, images, etc.)
     app.mount("/assets", StaticFiles(directory=os.path.join(FRONTEND_DIR, "assets")), name="assets") if os.path.isdir(os.path.join(FRONTEND_DIR, "assets")) else None
 
-    @app.get("/{full_path:path}")
+    @app.api_route("/{full_path:path}", methods=["GET", "HEAD"])
     async def serve_spa(full_path: str):
         """Serve React SPA – return index.html for all non-API routes."""
         file_path = os.path.join(FRONTEND_DIR, full_path)
