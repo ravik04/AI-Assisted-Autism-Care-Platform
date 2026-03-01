@@ -1,0 +1,289 @@
+{
+  "protocols": {
+    "ABA": {
+      "full_name": "Applied Behavior Analysis",
+      "description": "Evidence-based approach using principles of learning and behavior to increase helpful behaviors and decrease harmful ones. Gold-standard for ASD intervention.",
+      "age_range": "2-18 years",
+      "techniques": [
+        {
+          "name": "Discrete Trial Training (DTT)",
+          "description": "Structured one-on-one teaching using clear instructions, prompting, and reinforcement. Breaks skills into small, teachable steps.",
+          "domains": ["communication", "social", "behavior", "cognitive"],
+          "risk_levels": ["MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "Difficulty with structured learning, delayed milestones, limited response to verbal instructions"
+        },
+        {
+          "name": "Natural Environment Teaching (NET)",
+          "description": "Teaching skills in natural settings using child-initiated interests as learning opportunities.",
+          "domains": ["social", "communication"],
+          "risk_levels": ["LOW_RISK", "MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "Limited social engagement, reduced play skills, difficulty generalizing learned skills"
+        },
+        {
+          "name": "Pivotal Response Training (PRT)",
+          "description": "Targets pivotal areas (motivation, self-management, responding to multiple cues) to produce widespread behavioral improvements.",
+          "domains": ["social", "communication", "behavior"],
+          "risk_levels": ["MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "Low motivation, difficulty with self-regulation, limited response to social cues"
+        },
+        {
+          "name": "Functional Behavior Assessment (FBA)",
+          "description": "Systematic process to identify the purpose of challenging behaviors and develop replacement strategies.",
+          "domains": ["behavior"],
+          "risk_levels": ["MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "Repetitive behaviors, self-stimulatory actions, behavioral rigidity, tantrums"
+        },
+        {
+          "name": "Positive Behavior Support (PBS)",
+          "description": "Proactive approach to prevent challenging behaviors by modifying the environment and teaching alternative behaviors.",
+          "domains": ["behavior", "social"],
+          "risk_levels": ["LOW_RISK", "MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "Environmental triggers for challenging behavior, difficulty with transitions"
+        },
+        {
+          "name": "Task Analysis & Chaining",
+          "description": "Breaking complex skills into smaller sequential steps, teaching them through forward or backward chaining.",
+          "domains": ["behavior", "cognitive"],
+          "risk_levels": ["MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "Difficulty with multi-step tasks, daily living skills delays"
+        }
+      ]
+    },
+    "ESDM": {
+      "full_name": "Early Start Denver Model",
+      "description": "Comprehensive early intervention combining ABA with developmental and relationship-based approaches. Delivered in natural play-based settings for toddlers and preschoolers.",
+      "age_range": "12-48 months",
+      "techniques": [
+        {
+          "name": "Joint Attention Activities",
+          "description": "Using shared play and social routines to build eye contact, shared enjoyment, and coordinated attention with caregivers.",
+          "domains": ["social", "communication"],
+          "risk_levels": ["LOW_RISK", "MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "Limited eye contact, reduced shared attention, difficulty following gaze"
+        },
+        {
+          "name": "Imitation Training",
+          "description": "Structured play to encourage copying actions, sounds, and facial expressions, building the foundation for social learning.",
+          "domains": ["social", "communication"],
+          "risk_levels": ["MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "Limited imitation skills, reduced facial expression mirroring, delayed gesture use"
+        },
+        {
+          "name": "Sensory Social Routines",
+          "description": "Predictable social games (e.g., peek-a-boo, tickle games) that build anticipation, turn-taking, and social engagement.",
+          "domains": ["social"],
+          "risk_levels": ["LOW_RISK", "MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "Reduced social reciprocity, limited interaction initiation"
+        },
+        {
+          "name": "Play-Based Communication",
+          "description": "Using child-preferred toys and activities to create natural communication opportunities and expand language.",
+          "domains": ["communication", "social"],
+          "risk_levels": ["LOW_RISK", "MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "Speech delay, limited vocabulary, reduced communicative intent"
+        },
+        {
+          "name": "Parent-Delivered ESDM",
+          "description": "Training parents to implement ESDM strategies during daily routines (meals, bath, play) to maximize learning hours.",
+          "domains": ["social", "communication", "behavior"],
+          "risk_levels": ["LOW_RISK", "MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "General developmental concerns, need for consistent home intervention"
+        },
+        {
+          "name": "Motor Skill Integration",
+          "description": "Incorporating fine and gross motor activities into social and communication goals.",
+          "domains": ["behavior", "social"],
+          "risk_levels": ["MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "Motor delays, difficulty with coordinated movement, atypical posture patterns"
+        }
+      ]
+    },
+    "PECS": {
+      "full_name": "Picture Exchange Communication System",
+      "description": "Augmentative/alternative communication system teaching individuals to communicate using picture symbols. Progresses through 6 phases from basic requesting to commenting.",
+      "age_range": "18 months - adult",
+      "techniques": [
+        {
+          "name": "Phase I: Physical Exchange",
+          "description": "Child learns to exchange a single picture for a desired item with physical prompting and reinforcement.",
+          "domains": ["communication"],
+          "risk_levels": ["MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "No functional speech, limited communicative initiation, reliance on gestures only"
+        },
+        {
+          "name": "Phase II: Distance & Persistence",
+          "description": "Child learns to travel to communication board and exchange pictures across increasing distances.",
+          "domains": ["communication", "social"],
+          "risk_levels": ["MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "Communication only when partner is adjacent, difficulty sustaining communication attempts"
+        },
+        {
+          "name": "Phase III: Picture Discrimination",
+          "description": "Child learns to select the correct picture from a field of options to request specific items.",
+          "domains": ["communication", "cognitive"],
+          "risk_levels": ["MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "Difficulty discriminating between items, inconsistent requesting"
+        },
+        {
+          "name": "Phase IV: Sentence Structure",
+          "description": "Child constructs sentences on a sentence strip (e.g., 'I want' + item picture).",
+          "domains": ["communication"],
+          "risk_levels": ["CLINICAL_REVIEW"],
+          "indicators": "Single-word communication, difficulty combining symbols, limited sentence use"
+        },
+        {
+          "name": "Phase V: Responsive Requesting",
+          "description": "Child answers 'What do you want?' using the picture system.",
+          "domains": ["communication", "social"],
+          "risk_levels": ["CLINICAL_REVIEW"],
+          "indicators": "Under-responsive to questions, difficulty with conversational exchange"
+        },
+        {
+          "name": "Phase VI: Commenting",
+          "description": "Child spontaneously comments on environment using pictures (e.g., 'I see' + object).",
+          "domains": ["communication", "social"],
+          "risk_levels": ["CLINICAL_REVIEW"],
+          "indicators": "Limited spontaneous communication, difficulty with expressive labeling"
+        }
+      ]
+    },
+    "SensoryIntegration": {
+      "full_name": "Sensory Integration Therapy",
+      "description": "Occupational therapy approach addressing sensory processing difficulties through structured sensory experiences to improve adaptive responses.",
+      "age_range": "2-12 years",
+      "techniques": [
+        {
+          "name": "Sensory Diet Program",
+          "description": "Personalized schedule of sensory activities throughout the day to maintain optimal arousal and attention.",
+          "domains": ["behavior"],
+          "risk_levels": ["MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "Over/under-responsivity to sensory input, self-stimulatory behaviors, difficulty with attention"
+        },
+        {
+          "name": "Deep Pressure Activities",
+          "description": "Use of weighted blankets, compression garments, and firm touch to provide calming proprioceptive input.",
+          "domains": ["behavior"],
+          "risk_levels": ["MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "Sensory seeking, difficulty calming down, tactile defensiveness"
+        },
+        {
+          "name": "Vestibular Stimulation",
+          "description": "Swinging, spinning, and balance activities to improve body awareness and motor planning.",
+          "domains": ["behavior", "social"],
+          "risk_levels": ["MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "Poor balance, gravitational insecurity, motion sensitivity"
+        },
+        {
+          "name": "Visual-Motor Integration",
+          "description": "Activities combining visual tracking with fine motor tasks to improve hand-eye coordination and visual processing.",
+          "domains": ["behavior", "cognitive"],
+          "risk_levels": ["MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "Atypical gaze patterns, reduced eye tracking, difficulty with visual-motor tasks"
+        }
+      ]
+    },
+    "SocialSkills": {
+      "full_name": "Social Skills Training",
+      "description": "Structured programs teaching social interaction skills through modeling, role-play, video modeling, and peer-mediated strategies.",
+      "age_range": "3-18 years",
+      "techniques": [
+        {
+          "name": "Social Stories",
+          "description": "Short personalized stories describing social situations and expected behaviors, created to help the child understand social expectations.",
+          "domains": ["social", "communication"],
+          "risk_levels": ["LOW_RISK", "MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "Difficulty understanding social rules, unexpected responses in social situations"
+        },
+        {
+          "name": "Video Modeling",
+          "description": "Using video recordings of appropriate social behavior for the child to observe and imitate.",
+          "domains": ["social", "communication"],
+          "risk_levels": ["MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "Limited social imitation, difficulty generalizing social skills"
+        },
+        {
+          "name": "Peer-Mediated Intervention",
+          "description": "Training typically-developing peers to facilitate social interactions and model appropriate social behavior.",
+          "domains": ["social"],
+          "risk_levels": ["MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "Social isolation, difficulty initiating or maintaining peer interactions"
+        },
+        {
+          "name": "Emotion Recognition Training",
+          "description": "Teaching identification and understanding of emotions through facial expressions, body language, and tone of voice.",
+          "domains": ["social", "communication"],
+          "risk_levels": ["MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "Difficulty reading facial expressions, limited emotional vocabulary, atypical facial affect"
+        },
+        {
+          "name": "Turn-Taking & Cooperative Play",
+          "description": "Structured practice in sharing, waiting, and cooperating during play activities with guided support.",
+          "domains": ["social"],
+          "risk_levels": ["LOW_RISK", "MONITOR", "CLINICAL_REVIEW"],
+          "indicators": "Parallel play without interaction, difficulty sharing, limited cooperative behavior"
+        }
+      ]
+    }
+  },
+  "dsm5_criteria": {
+    "A": {
+      "title": "Persistent deficits in social communication and social interaction across multiple contexts",
+      "subcriteria": [
+        "A1: Deficits in social-emotional reciprocity (e.g., abnormal social approach, failure of back-and-forth conversation, reduced sharing of interests/emotions)",
+        "A2: Deficits in nonverbal communicative behaviors (e.g., poorly integrated verbal/nonverbal communication, abnormalities in eye contact and body language, deficits in understanding/use of gestures)",
+        "A3: Deficits in developing, maintaining, and understanding relationships (e.g., difficulty adjusting behavior to social contexts, difficulty sharing imaginative play, absence of interest in peers)"
+      ]
+    },
+    "B": {
+      "title": "Restricted, repetitive patterns of behavior, interests, or activities",
+      "subcriteria": [
+        "B1: Stereotyped or repetitive motor movements, use of objects, or speech",
+        "B2: Insistence on sameness, inflexible adherence to routines, ritualized patterns",
+        "B3: Highly restricted, fixated interests that are abnormal in intensity or focus",
+        "B4: Hyper- or hypo-reactivity to sensory input or unusual interest in sensory aspects of the environment"
+      ]
+    },
+    "severity_levels": {
+      "Level 1": "Requiring support — noticeable impairments without support in place",
+      "Level 2": "Requiring substantial support — marked deficits in verbal/nonverbal social communication",
+      "Level 3": "Requiring very substantial support — severe deficits in verbal/nonverbal social communication"
+    }
+  },
+  "mchat_guidelines": {
+    "description": "Modified Checklist for Autism in Toddlers, Revised with Follow-Up (M-CHAT-R/F)",
+    "age_range": "16-30 months",
+    "scoring": {
+      "low_risk": "Total score 0-2: no follow-up required unless surveillance indicates risk",
+      "medium_risk": "Total score 3-7: administer follow-up. If score remains >= 2 after follow-up, refer for diagnostic evaluation",
+      "high_risk": "Total score 8-20: immediate referral for diagnostic evaluation and early intervention"
+    },
+    "critical_items": ["Does your child look you in the eye?", "Does your child respond when you call their name?", "Does your child point to ask for something?", "Does your child follow where you are looking?", "Does your child pretend (e.g., feed a doll)?"]
+  },
+  "modality_to_domain_mapping": {
+    "face": {
+      "primary_domains": ["social", "communication"],
+      "clinical_relevance": "Atypical facial expressions may indicate social-emotional reciprocity deficits (DSM-5 A1) and nonverbal communication deficits (DSM-5 A2)",
+      "high_risk_therapies": ["Emotion Recognition Training", "Imitation Training", "Video Modeling"]
+    },
+    "behavior": {
+      "primary_domains": ["behavior", "social"],
+      "clinical_relevance": "Repetitive/atypical behavioral patterns relate to restricted/repetitive behaviors (DSM-5 B1, B2, B4)",
+      "high_risk_therapies": ["Functional Behavior Assessment", "Positive Behavior Support", "Sensory Diet Program"]
+    },
+    "questionnaire": {
+      "primary_domains": ["social", "communication", "behavior"],
+      "clinical_relevance": "Structured screening capturing parent-reported developmental concerns across all ASD domains",
+      "high_risk_therapies": ["Determined by domain profile analysis"]
+    },
+    "eye_tracking": {
+      "primary_domains": ["social", "communication"],
+      "clinical_relevance": "Atypical gaze patterns suggest deficits in eye contact and shared attention (DSM-5 A2, A3)",
+      "high_risk_therapies": ["Joint Attention Activities", "Visual-Motor Integration", "Social Stories"]
+    },
+    "pose": {
+      "primary_domains": ["behavior"],
+      "clinical_relevance": "Atypical posture and movement patterns may indicate motor stereotypies (DSM-5 B1) or sensory processing differences (DSM-5 B4)",
+      "high_risk_therapies": ["Motor Skill Integration", "Sensory Diet Program", "Deep Pressure Activities"]
+    }
+  }
+}

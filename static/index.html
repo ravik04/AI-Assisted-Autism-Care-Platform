@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Autism AI Screening — Multi-Agent Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ─── Sidebar ────────────────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">🧠</div>
+    <h1>AutismAI</h1>
+    <span class="version-badge">V3</span>
+  </div>
+
+  <div class="sidebar-section">
+    <h3>Upload Input</h3>
+    <div class="input-toggle">
+      <button class="toggle-btn active" data-type="image" id="btn-image">Image</button>
+      <button class="toggle-btn" data-type="video" id="btn-video">Video</button>
+    </div>
+
+    <div class="upload-area" id="upload-area">
+      <div class="upload-icon">📁</div>
+      <p>Drag &amp; drop or <span class="upload-link">browse</span></p>
+      <p class="upload-hint" id="upload-hint">JPG, PNG, BMP, WebP</p>
+      <input type="file" id="file-input" accept="image/*" hidden />
+    </div>
+    <div class="file-name" id="file-name"></div>
+    <button class="btn-analyze" id="btn-analyze" disabled>Analyze</button>
+  </div>
+
+  <div class="sidebar-section">
+    <h3>Model Status</h3>
+    <div class="status-row"><span class="dot green"></span> Face Classifier</div>
+    <div class="status-row"><span class="dot green"></span> Behavior LSTM</div>
+    <div class="status-row"><span class="dot green"></span> MobileNetV2 Backbone</div>
+  </div>
+
+  <div class="sidebar-section">
+    <h3>Pipeline</h3>
+    <div class="pipeline-flow">
+      <div class="pipe-node">MobileNetV2</div>
+      <div class="pipe-arrow">↓</div>
+      <div class="pipe-node">Screening Agent</div>
+      <div class="pipe-arrow">↓</div>
+      <div class="pipe-node">Clinical Agent</div>
+      <div class="pipe-arrow">↓</div>
+      <div class="pipe-node">Therapy Agent</div>
+      <div class="pipe-arrow">↓</div>
+      <div class="pipe-node">Monitoring Agent</div>
+    </div>
+  </div>
+
+  <button class="btn-clear" id="btn-clear">Clear History</button>
+</aside>
+
+<!-- ─── Mobile header ──────────────────────────────────────────────── -->
+<button class="mobile-menu-btn" id="mobile-menu-btn">☰</button>
+
+<!-- ─── Main Content ───────────────────────────────────────────────── -->
+<main class="main-content">
+
+  <!-- Hero / Welcome -->
+  <div class="hero" id="hero">
+    <h2>🧠 Autism AI Screening Dashboard</h2>
+    <p>Upload a facial image or video to begin AI-powered developmental screening with explainable multi-agent analysis.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🔬</div>
+        <h4>MobileNetV2</h4>
+        <p>Transfer-learned face classifier with 82.5% accuracy</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎬</div>
+        <h4>Behavior LSTM</h4>
+        <p>Temporal behavior analysis from video sequences</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <h4>4-Agent Pipeline</h4>
+        <p>Screening → Clinical → Therapy → Monitoring</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔥</div>
+        <h4>Grad-CAM</h4>
+        <p>Visual explainability showing model attention</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading overlay -->
+  <div class="loading-overlay" id="loading">
+    <div class="spinner"></div>
+    <p>Analyzing with multi-agent pipeline...</p>
+  </div>
+
+  <!-- Results (hidden initially) -->
+  <div class="results" id="results" style="display:none;">
+
+    <!-- Risk Badge -->
+    <div class="risk-banner" id="risk-banner">
+      <span class="risk-label" id="risk-label">—</span>
+      <span class="risk-sublabel" id="risk-sublabel"></span>
+    </div>
+
+    <!-- Images Row -->
+    <div class="images-row">
+      <div class="image-card">
+        <h3>Input</h3>
+        <div class="img-wrapper">
+          <img id="img-original" src="" alt="Original" />
+        </div>
+      </div>
+      <div class="image-card">
+        <h3>Grad-CAM Heatmap</h3>
+        <div class="img-wrapper">
+          <img id="img-gradcam" src="" alt="Grad-CAM" />
+        </div>
+        <p class="img-caption">Highlighted regions show where the model focuses</p>
+      </div>
+    </div>
+
+    <!-- Score Gauges -->
+    <div class="scores-row" id="scores-row">
+      <!-- Filled by JS -->
+    </div>
+
+    <!-- Agent Tabs -->
+    <div class="agent-section">
+      <div class="tab-bar">
+        <button class="tab active" data-tab="screening">🔍 Screening</button>
+        <button class="tab" data-tab="clinical">🏥 Clinical</button>
+        <button class="tab" data-tab="therapy">💊 Therapy</button>
+        <button class="tab" data-tab="monitoring">📊 Monitoring</button>
+      </div>
+
+      <div class="tab-content active" id="tab-screening"></div>
+      <div class="tab-content" id="tab-clinical"></div>
+      <div class="tab-content" id="tab-therapy"></div>
+      <div class="tab-content" id="tab-monitoring"></div>
+    </div>
+
+    <!-- Score History Chart -->
+    <div class="chart-section">
+      <h3>📈 Score History</h3>
+      <canvas id="chart" height="200"></canvas>
+      <p class="chart-legend">
+        <span class="legend-low">■ &lt;0.3 Low Risk</span>
+        <span class="legend-mid">■ 0.3–0.6 Monitor</span>
+        <span class="legend-high">■ &gt;0.6 Clinical Review</span>
+      </p>
+    </div>
+
+  </div>
+</main>
+
+<!-- ─── Footer ─────────────────────────────────────────────────────── -->
+<footer class="footer">
+  Autism AI Screening Prototype V3 — Multi-Agent Pipeline &nbsp;|&nbsp; MobileNetV2 + LSTM &nbsp;|&nbsp; For research &amp; competition use only
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

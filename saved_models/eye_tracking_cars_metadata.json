@@ -1,0 +1,179 @@
+{
+  "model_type": "Ridge Regression",
+  "task": "CARS severity prediction from Tobii eye-tracking",
+  "dataset": "MMASD Eye-Tracking Output (25 ASD participants)",
+  "n_samples": 25,
+  "n_features": 54,
+  "feature_names": [
+    "pupil_right_mean",
+    "pupil_right_std",
+    "pupil_right_median",
+    "pupil_right_range",
+    "pupil_left_mean",
+    "pupil_left_std",
+    "pupil_left_median",
+    "pupil_left_range",
+    "pupil_avg_mean",
+    "pupil_avg_std",
+    "gaze_right_x_mean",
+    "gaze_right_x_std",
+    "gaze_right_y_mean",
+    "gaze_right_y_std",
+    "gaze_right_dispersion",
+    "gaze_left_x_mean",
+    "gaze_left_x_std",
+    "gaze_left_y_mean",
+    "gaze_left_y_std",
+    "gaze_left_dispersion",
+    "fixation_ratio_right",
+    "saccade_ratio_right",
+    "fixation_ratio_left",
+    "saccade_ratio_left",
+    "fix_dur_mean",
+    "fix_dur_std",
+    "fix_dur_median",
+    "fix_dur_max",
+    "sac_amp_mean",
+    "sac_amp_std",
+    "sac_amp_max",
+    "gaze_vel_mean",
+    "gaze_vel_std",
+    "gaze_vel_median",
+    "gaze_vel_p90",
+    "aoi_right_unique",
+    "aoi_right_top_ratio",
+    "aoi_left_unique",
+    "aoi_left_top_ratio",
+    "tracking_ratio_mean",
+    "total_recording_ms",
+    "n_samples",
+    "gvec_right_x_mean",
+    "gvec_right_x_std",
+    "gvec_right_y_mean",
+    "gvec_right_y_std",
+    "gvec_right_z_mean",
+    "gvec_right_z_std",
+    "gvec_left_x_mean",
+    "gvec_left_x_std",
+    "gvec_left_y_mean",
+    "gvec_left_y_std",
+    "gvec_left_z_mean",
+    "gvec_left_z_std"
+  ],
+  "alpha": 1000.0,
+  "loo_mae": 4.847,
+  "loo_r2": -0.08,
+  "severity_accuracy": 0.44,
+  "cars_range": {
+    "min": 17.0,
+    "max": 42.5,
+    "mean": 31.64
+  },
+  "severity_thresholds": {
+    "mild": "<30",
+    "moderate": "30-36",
+    "severe": ">36"
+  },
+  "participant_predictions": {
+    "1": {
+      "actual": 32.5,
+      "predicted": 31.3
+    },
+    "2": {
+      "actual": 36.5,
+      "predicted": 31.3
+    },
+    "3": {
+      "actual": 27.0,
+      "predicted": 32.9
+    },
+    "4": {
+      "actual": 35.0,
+      "predicted": 31.1
+    },
+    "5": {
+      "actual": 31.0,
+      "predicted": 31.3
+    },
+    "6": {
+      "actual": 27.0,
+      "predicted": 31.5
+    },
+    "7": {
+      "actual": 34.5,
+      "predicted": 32.6
+    },
+    "8": {
+      "actual": 34.5,
+      "predicted": 30.8
+    },
+    "9": {
+      "actual": 27.0,
+      "predicted": 31.5
+    },
+    "10": {
+      "actual": 26.5,
+      "predicted": 31.9
+    },
+    "11": {
+      "actual": 42.5,
+      "predicted": 31.9
+    },
+    "12": {
+      "actual": 36.5,
+      "predicted": 31.0
+    },
+    "13": {
+      "actual": 17.0,
+      "predicted": 32.2
+    },
+    "14": {
+      "actual": 20.0,
+      "predicted": 31.9
+    },
+    "15": {
+      "actual": 30.5,
+      "predicted": 31.6
+    },
+    "16": {
+      "actual": 38.0,
+      "predicted": 30.9
+    },
+    "17": {
+      "actual": 38.5,
+      "predicted": 31.6
+    },
+    "18": {
+      "actual": 34.5,
+      "predicted": 30.7
+    },
+    "19": {
+      "actual": 25.5,
+      "predicted": 31.7
+    },
+    "20": {
+      "actual": 27.0,
+      "predicted": 32.5
+    },
+    "21": {
+      "actual": 37.5,
+      "predicted": 31.9
+    },
+    "22": {
+      "actual": 33.5,
+      "predicted": 31.2
+    },
+    "23": {
+      "actual": 32.0,
+      "predicted": 32.4
+    },
+    "24": {
+      "actual": 31.5,
+      "predicted": 31.5
+    },
+    "25": {
+      "actual": 35.0,
+      "predicted": 32.3
+    }
+  }
+}

@@ -1,0 +1,46 @@
+# ── Virtual environment ──
+.venv/
+venv/
+env/
+
+# ── Python cache ──
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# ── Environment / secrets ──
+.env
+.env.*
+!.env.example
+
+# ── Saved ML models (too large for GitHub) ──
+saved_models/*.keras
+saved_models/*.pkl
+saved_models/*.h5
+
+# ── Logs & temp ──
+*.log
+et_cars_training_log.txt
+et_peek_output.txt
+mmasd_explore_output.txt
+mmasd_peek_output.txt
+pose_training_log.txt
+test_backend.log
+output.json
+
+# ── OS files ──
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE ──
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Dist / build ──
+dist/
+build/
+*.egg-info/
