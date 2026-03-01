@@ -15,11 +15,13 @@ from scipy import stats
 
 # ── Modality priors (from training metrics) ───────────────────────────
 MODALITY_RELIABILITY = {
-    "face":          {"accuracy": 0.825, "weight": 0.25},
-    "behavior":      {"accuracy": 0.615, "weight": 0.15},
-    "questionnaire": {"accuracy": 1.000, "weight": 0.30},
-    "eye_tracking":  {"accuracy": 0.675, "weight": 0.15},
-    "pose":          {"accuracy": 0.967, "weight": 0.15},
+    "face":          {"accuracy": 0.825, "weight": 0.20},
+    "behavior":      {"accuracy": 0.615, "weight": 0.12},
+    "questionnaire": {"accuracy": 1.000, "weight": 0.25},
+    "eye_tracking":  {"accuracy": 0.675, "weight": 0.12},
+    "pose":          {"accuracy": 0.967, "weight": 0.12},
+    "audio":         {"accuracy": 0.500, "weight": 0.10},
+    "eeg":           {"accuracy": 0.980, "weight": 0.09},
 }
 
 # Beta distribution priors (mildly informative)

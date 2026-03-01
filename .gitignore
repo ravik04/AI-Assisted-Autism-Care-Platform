@@ -18,6 +18,9 @@ __pycache__/
 # Included in repo (all under 25MB each) for deployment
 # If models grow too large, use Git LFS instead
 
+# ── Runtime data (consent, feedback, sessions) ──
+data/
+
 # ── Logs & temp ──
 *.log
 et_cars_training_log.txt

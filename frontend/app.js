@@ -53,6 +53,9 @@ async function checkAPI() {
       "st-eye": d.models.eye_tracking_xgb,
       "st-pose": d.models.pose_skeleton_xgb,
       "st-cars": d.models.cars_severity,
+      "st-audio": d.models.audio_speech,
+      "st-eeg": d.models.eeg_neural,
+      "st-fusion": d.models.attention_fusion,
     };
     for (const [id, loaded] of Object.entries(map)) {
       const pill = document.getElementById(id);
@@ -861,6 +864,253 @@ document.getElementById("exportBtn").addEventListener("click", () => {
   a.click();
   URL.revokeObjectURL(url);
 });
+
+// ══════════════════════════════════════════════════════════════════════
+//  AUDIO ANALYSIS
+// ══════════════════════════════════════════════════════════════════════
+(function() {
+  const audioBtn = document.getElementById("audioAnalyzeBtn");
+  const audioFileInput = document.getElementById("audioFileInput");
+  let audioFile = null;
+
+  if (audioFileInput) {
+    audioFileInput.addEventListener("change", () => {
+      if (audioFileInput.files.length) {
+        audioFile = audioFileInput.files[0];
+        audioBtn.textContent = `Analyze: ${audioFile.name}`;
+      }
+    });
+  }
+
+  if (audioBtn) {
+    audioBtn.addEventListener("click", async () => {
+      const loader = document.getElementById("audioLoader");
+      loader.classList.remove("hidden");
+      audioBtn.disabled = true;
+
+      try {
+        const form = new FormData();
+        if (audioFile) form.append("file", audioFile);
+        const url = API + "/api/analyze-audio?use_synthetic=" + (audioFile ? "false" : "true");
+        const r = await fetch(url, { method: "POST", body: audioFile ? form : undefined });
+        const d = await r.json();
+
+        const resultEl = document.getElementById("audioResults");
+        resultEl.classList.remove("hidden");
+        const scoreEl = document.getElementById("audioScoreDisplay");
+        const cls = d.audio_score > 0.6 ? "high" : d.audio_score > 0.3 ? "medium" : "low";
+        scoreEl.innerHTML = `
+          <div class="mini-score ${cls}">Audio Risk: ${(d.audio_score * 100).toFixed(1)}%</div>
+          <div class="mini-details">
+            Speech Rate: ${d.feature_summary?.speech_rate?.toFixed(2) || 'N/A'} |
+            Pause Ratio: ${d.feature_summary?.pause_ratio?.toFixed(2) || 'N/A'} |
+            Pitch Variability: ${d.feature_summary?.pitch_variability?.toFixed(2) || 'N/A'}
+          </div>`;
+
+        // Store for fusion
+        if (!window._modalityScores) window._modalityScores = {};
+        window._modalityScores.audio = d.audio_score;
+        latestResult = d;
+        allSessions.push(d);
+        updateDashboard(d);
+      } catch (err) {
+        alert("Audio analysis error: " + err.message);
+      } finally {
+        loader.classList.add("hidden");
+        audioBtn.disabled = false;
+      }
+    });
+  }
+})();
+
+// ══════════════════════════════════════════════════════════════════════
+//  EEG ANALYSIS
+// ══════════════════════════════════════════════════════════════════════
+(function() {
+  const eegBtn = document.getElementById("eegAnalyzeBtn");
+  const eegFileInput = document.getElementById("eegFileInput");
+  let eegFile = null;
+
+  if (eegFileInput) {
+    eegFileInput.addEventListener("change", () => {
+      if (eegFileInput.files.length) {
+        eegFile = eegFileInput.files[0];
+        eegBtn.textContent = `Analyze: ${eegFile.name}`;
+      }
+    });
+  }
+
+  if (eegBtn) {
+    eegBtn.addEventListener("click", async () => {
+      const loader = document.getElementById("eegLoader");
+      loader.classList.remove("hidden");
+      eegBtn.disabled = true;
+
+      try {
+        const form = new FormData();
+        if (eegFile) form.append("file", eegFile);
+        const url = API + "/api/analyze-eeg?use_synthetic=" + (eegFile ? "false" : "true");
+        const r = await fetch(url, { method: "POST", body: eegFile ? form : undefined });
+        const d = await r.json();
+
+        const resultEl = document.getElementById("eegResults");
+        resultEl.classList.remove("hidden");
+        const scoreEl = document.getElementById("eegScoreDisplay");
+        const cls = d.eeg_score > 0.6 ? "high" : d.eeg_score > 0.3 ? "medium" : "low";
+        scoreEl.innerHTML = `
+          <div class="mini-score ${cls}">EEG Risk: ${(d.eeg_score * 100).toFixed(1)}%</div>
+          <div class="mini-details">
+            Theta Power: ${d.feature_summary?.theta_power?.toFixed(3) || 'N/A'} |
+            Alpha Power: ${d.feature_summary?.alpha_power?.toFixed(3) || 'N/A'} |
+            Theta/Beta: ${d.feature_summary?.theta_beta_ratio?.toFixed(3) || 'N/A'}
+          </div>`;
+
+        if (!window._modalityScores) window._modalityScores = {};
+        window._modalityScores.eeg = d.eeg_score;
+        latestResult = d;
+        allSessions.push(d);
+        updateDashboard(d);
+      } catch (err) {
+        alert("EEG analysis error: " + err.message);
+      } finally {
+        loader.classList.add("hidden");
+        eegBtn.disabled = false;
+      }
+    });
+  }
+})();
+
+// ══════════════════════════════════════════════════════════════════════
+//  CONSENT MANAGEMENT
+// ══════════════════════════════════════════════════════════════════════
+(function() {
+  // Show consent modal on first visit
+  if (!localStorage.getItem("consent_granted")) {
+    setTimeout(() => {
+      const modal = document.getElementById("consentModal");
+      if (modal) modal.classList.remove("hidden");
+    }, 1000);
+  }
+
+  const consentForm = document.getElementById("consentForm");
+  if (consentForm) {
+    consentForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const guardian = document.getElementById("consentGuardian").value;
+      const email = document.getElementById("consentEmail").value;
+      const categories = [];
+      document.querySelectorAll(".consent-categories input:checked").forEach(cb => {
+        categories.push(cb.value);
+      });
+
+      try {
+        await fetch(API + "/api/consent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            child_id: "demo-child",
+            guardian_name: guardian,
+            guardian_email: email || null,
+            categories: categories,
+          }),
+        });
+        localStorage.setItem("consent_granted", "true");
+        document.getElementById("consentModal").classList.add("hidden");
+      } catch (err) {
+        console.error("Consent error:", err);
+        localStorage.setItem("consent_granted", "true");
+        document.getElementById("consentModal").classList.add("hidden");
+      }
+    });
+  }
+})();
+
+// ══════════════════════════════════════════════════════════════════════
+//  RLHF FEEDBACK
+// ══════════════════════════════════════════════════════════════════════
+(function() {
+  // Rating buttons
+  document.querySelectorAll(".rating-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".rating-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+    });
+  });
+
+  const feedbackForm = document.getElementById("feedbackForm");
+  if (feedbackForm) {
+    feedbackForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const activeRating = document.querySelector(".rating-btn.active");
+      const rating = activeRating ? activeRating.dataset.rating : "neutral";
+      const comment = document.getElementById("feedbackComment").value;
+      const correction = document.getElementById("feedbackCorrection").value;
+
+      const corrections = {};
+      if (correction) corrections.risk_level = correction;
+
+      try {
+        const r = await fetch(API + "/api/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: `session-${Date.now()}`,
+            feedback_type: "screening",
+            rating: rating,
+            comment: comment || null,
+            user_role: document.getElementById("roleSelector")?.value || "clinician",
+            corrections: Object.keys(corrections).length ? corrections : null,
+          }),
+        });
+        const d = await r.json();
+        const statusEl = document.getElementById("feedbackStatus");
+        statusEl.classList.remove("hidden");
+        statusEl.innerHTML = `<strong>Thank you!</strong> Feedback recorded (ID: ${d.feedback_id?.slice(0, 8)})`;
+
+        // Load summary
+        loadFeedbackSummary();
+      } catch (err) {
+        alert("Feedback error: " + err.message);
+      }
+    });
+  }
+
+  async function loadFeedbackSummary() {
+    try {
+      const r = await fetch(API + "/api/feedback/summary");
+      const d = await r.json();
+      if (d.total_feedback > 0) {
+        const el = document.getElementById("feedbackSummary");
+        el.classList.remove("hidden");
+        el.innerHTML = `
+          <h4>Feedback Summary (${d.total_feedback} responses)</h4>
+          <div class="summary-stats">
+            <span>Agreement Rate: <strong>${(d.agreement_rate * 100).toFixed(0)}%</strong></span>
+            ${d.top_corrections?.length ? `<span>Top Correction: ${d.top_corrections[0]?.correction}</span>` : ''}
+          </div>`;
+      }
+    } catch {}
+  }
+})();
+
+// ══════════════════════════════════════════════════════════════════════
+//  ROLE-BASED VIEW
+// ══════════════════════════════════════════════════════════════════════
+(function() {
+  const roleSelector = document.getElementById("roleSelector");
+  if (roleSelector) {
+    roleSelector.addEventListener("change", () => {
+      const role = roleSelector.value;
+      document.body.dataset.role = role;
+
+      // Hide/show elements based on role
+      const clinicianOnly = document.querySelectorAll(".clinician-only");
+      const parentOnly = document.querySelectorAll(".parent-only");
+      clinicianOnly.forEach(el => el.style.display = role === "parent" ? "none" : "");
+      parentOnly.forEach(el => el.style.display = role === "parent" ? "" : "none");
+    });
+  }
+})();
 
 // ══════════════════════════════════════════════════════════════════════
 //  INIT

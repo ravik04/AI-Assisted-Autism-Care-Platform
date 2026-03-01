@@ -7,6 +7,40 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <!-- ══════════ CONSENT MODAL ══════════ -->
+  <div class="modal-overlay hidden" id="consentModal">
+    <div class="modal-card">
+      <h2>Data Processing Consent</h2>
+      <p class="modal-desc">This AI screening tool processes sensitive developmental data. Please review and consent to the data categories below.</p>
+      <form id="consentForm">
+        <div class="consent-field">
+          <label>Guardian Name *</label>
+          <input type="text" id="consentGuardian" required placeholder="Full name" />
+        </div>
+        <div class="consent-field">
+          <label>Guardian Email</label>
+          <input type="email" id="consentEmail" placeholder="email@example.com" />
+        </div>
+        <div class="consent-categories">
+          <label class="consent-check"><input type="checkbox" value="facial_analysis" checked /> Facial Expression Analysis</label>
+          <label class="consent-check"><input type="checkbox" value="behavior_video" checked /> Behavioral Video Analysis</label>
+          <label class="consent-check"><input type="checkbox" value="audio_speech" checked /> Audio/Speech Analysis</label>
+          <label class="consent-check"><input type="checkbox" value="eeg_neural" checked /> EEG Neural Signal Analysis</label>
+          <label class="consent-check"><input type="checkbox" value="eye_tracking" checked /> Eye-Tracking Analysis</label>
+          <label class="consent-check"><input type="checkbox" value="questionnaire" checked /> Questionnaire Data</label>
+          <label class="consent-check"><input type="checkbox" value="data_storage" checked /> Data Storage</label>
+          <label class="consent-check"><input type="checkbox" value="llm_processing" checked /> LLM-Powered AI Processing</label>
+        </div>
+        <div class="consent-note">
+          <strong>Neurodiversity Note:</strong> This tool identifies neurodevelopmental differences, not deficits. Autism is a form of neurodiversity with unique strengths.
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('consentModal').classList.add('hidden')">Decline</button>
+          <button type="submit" class="btn btn-primary">I Consent</button>
+        </div>
+      </form>
+    </div>
+  </div>
   <!-- ══════════ SIDEBAR ══════════ -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
@@ -24,6 +58,14 @@
       <span class="brand-text">AutismCare AI</span>
     </div>
     <nav class="sidebar-nav">
+      <div class="role-selector">
+        <select id="roleSelector">
+          <option value="clinician">Clinician View</option>
+          <option value="parent">Parent View</option>
+          <option value="therapist">Therapist View</option>
+          <option value="researcher">Researcher View</option>
+        </select>
+      </div>
       <a href="#" class="nav-item active" data-page="dashboard">
         <svg class="nav-icon" viewBox="0 0 24 24" width="20" height="20"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" fill="currentColor"/></svg>
         <span class="nav-label">Dashboard</span>
@@ -231,6 +273,9 @@
           <span class="model-pill" id="st-eye"><span class="mp-dot"></span>Eye-Tracking XGB</span>
           <span class="model-pill" id="st-pose"><span class="mp-dot"></span>Pose/Skeleton XGB</span>
           <span class="model-pill" id="st-cars"><span class="mp-dot"></span>CARS Severity</span>
+          <span class="model-pill" id="st-audio"><span class="mp-dot"></span>Audio/Speech CNN+GRU</span>
+          <span class="model-pill" id="st-eeg"><span class="mp-dot"></span>EEG Neural 1D-CNN</span>
+          <span class="model-pill" id="st-fusion"><span class="mp-dot"></span>Attention Fusion</span>
         </div>
       </div>
     </section>
@@ -241,7 +286,49 @@
     <section class="page" id="page-screening">
       <div class="page-header">
         <h1>Upload Video and Complete Questionnaire</h1>
-        <p class="page-subtitle">Multi-modal screening: combine visual analysis with structured assessment</p>
+        <p class="page-subtitle">Multi-modal screening: combine visual, audio, EEG, and structured assessment</p>
+      </div>
+
+      <!-- Audio & EEG Row -->
+      <div class="screening-audio-eeg-row">
+        <div class="card">
+          <div class="step-header">
+            <span class="step-number">A</span>
+            <h3>Audio/Speech Analysis</h3>
+          </div>
+          <p class="card-desc">Upload a speech recording for prosody and vocalization analysis, or use synthetic demo data.</p>
+          <div class="upload-zone-sm" id="audioUploadZone">
+            <svg viewBox="0 0 24 24" width="32" height="32"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" fill="#94a3b8"/></svg>
+            <p>Drop audio file or <label for="audioFileInput" class="upload-link">browse</label></p>
+            <input type="file" id="audioFileInput" accept="audio/*,.wav,.mp3,.ogg,.flac" hidden />
+          </div>
+          <button class="btn btn-primary btn-full" id="audioAnalyzeBtn">
+            Analyze Audio (Synthetic Demo)
+          </button>
+          <div class="loader hidden" id="audioLoader"><div class="spinner"></div> Analyzing audio...</div>
+          <div id="audioResults" class="hidden">
+            <div class="mini-score-display" id="audioScoreDisplay"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="step-header">
+            <span class="step-number">E</span>
+            <h3>EEG Neural Signal Analysis</h3>
+          </div>
+          <p class="card-desc">Upload an EEG CSV file for brainwave pattern analysis, or use synthetic demo data.</p>
+          <div class="upload-zone-sm" id="eegUploadZone">
+            <svg viewBox="0 0 24 24" width="32" height="32"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" fill="#94a3b8"/></svg>
+            <p>Drop EEG CSV or <label for="eegFileInput" class="upload-link">browse</label></p>
+            <input type="file" id="eegFileInput" accept=".csv,.txt" hidden />
+          </div>
+          <button class="btn btn-primary btn-full" id="eegAnalyzeBtn">
+            Analyze EEG (Synthetic Demo)
+          </button>
+          <div class="loader hidden" id="eegLoader"><div class="spinner"></div> Analyzing EEG...</div>
+          <div id="eegResults" class="hidden">
+            <div class="mini-score-display" id="eegScoreDisplay"></div>
+          </div>
+        </div>
       </div>
 
       <div class="screening-two-col">
@@ -541,9 +628,61 @@
          ═══════════════════════════════════════════════════════════════ -->
     <section class="page" id="page-reports">
       <div class="page-header">
-        <h1>Reports</h1>
-        <p class="page-subtitle">Generate and export clinical screening reports</p>
+        <h1>Reports & Feedback</h1>
+        <p class="page-subtitle">Generate reports, provide feedback, and view AI explainability</p>
       </div>
+
+      <!-- Explainability Section -->
+      <div class="card" id="explainabilityCard">
+        <h3>AI Explainability</h3>
+        <div id="explainContent">
+          <div class="neurodiversity-banner">
+            <strong>Neurodiversity Perspective:</strong> This screening tool identifies neurodevelopmental differences, not deficits. Autism is a form of neurodiversity with unique strengths including attention to detail, systematic thinking, and deep focus abilities.
+          </div>
+          <div id="featureImportance" class="feature-importance-chart">
+            <div class="empty-state-sm">Run a screening to see feature importance analysis.</div>
+          </div>
+          <div id="fusionExplanation" class="fusion-explanation">
+            <div class="empty-state-sm">Multi-modal fusion explanation will appear here after screening.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RLHF Feedback Section -->
+      <div class="card" id="feedbackCard">
+        <h3>Clinician Feedback (RLHF)</h3>
+        <p class="card-desc">Your feedback helps improve AI recommendations through reinforcement learning from human feedback.</p>
+        <form id="feedbackForm">
+          <div class="feedback-rating">
+            <label>How accurate was the AI screening result?</label>
+            <div class="rating-buttons">
+              <button type="button" class="rating-btn" data-rating="strongly_agree">Strongly Agree</button>
+              <button type="button" class="rating-btn" data-rating="agree">Agree</button>
+              <button type="button" class="rating-btn active" data-rating="neutral">Neutral</button>
+              <button type="button" class="rating-btn" data-rating="disagree">Disagree</button>
+              <button type="button" class="rating-btn" data-rating="strongly_disagree">Strongly Disagree</button>
+            </div>
+          </div>
+          <div class="feedback-field">
+            <label>Comments / Clinical Notes</label>
+            <textarea id="feedbackComment" rows="3" placeholder="Add any clinical observations or corrections..."></textarea>
+          </div>
+          <div class="feedback-field">
+            <label>Correct Risk Level (if different)</label>
+            <select id="feedbackCorrection">
+              <option value="">-- No Correction Needed --</option>
+              <option value="high">Should be High Risk</option>
+              <option value="moderate">Should be Moderate Risk</option>
+              <option value="low">Should be Low Risk</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary">Submit Feedback</button>
+        </form>
+        <div id="feedbackStatus" class="hidden feedback-success"></div>
+        <div id="feedbackSummary" class="feedback-summary hidden"></div>
+      </div>
+
+      <!-- Report Export -->
       <div class="card">
         <h3>Latest Report</h3>
         <div id="reportContent" class="report-area">

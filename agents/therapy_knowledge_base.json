@@ -284,6 +284,17 @@
       "primary_domains": ["behavior"],
       "clinical_relevance": "Atypical posture and movement patterns may indicate motor stereotypies (DSM-5 B1) or sensory processing differences (DSM-5 B4)",
       "high_risk_therapies": ["Motor Skill Integration", "Sensory Diet Program", "Deep Pressure Activities"]
+    },
+    "audio": {
+      "primary_domains": ["communication", "social"],
+      "clinical_relevance": "Atypical speech prosody patterns (reduced pitch variability, unusual rhythm, increased pauses) relate to communication differences (DSM-5 A1, A2). Note: atypical prosody is a neurodevelopmental difference, not a deficit",
+      "high_risk_therapies": ["Speech-Language Pathology", "Prosody Training", "Social Communication Intervention"]
+    },
+    "eeg": {
+      "primary_domains": ["behavior", "cognitive"],
+      "clinical_relevance": "Elevated theta/beta ratio and atypical interhemispheric coherence are neural biomarkers associated with autism. These reflect different neural processing patterns (neurodiversity), not pathology",
+      "high_risk_therapies": ["Neurofeedback Training", "Sensory Integration Therapy", "Cognitive-Behavioral Interventions"]
     }
-  }
+  },
+  "neurodiversity_note": "Autism is a form of neurodiversity with unique cognitive strengths including attention to detail, pattern recognition, systematic thinking, and intense focus. Intervention goals should be strength-based, supporting the individual's development while respecting their neurodevelopmental identity."
 }

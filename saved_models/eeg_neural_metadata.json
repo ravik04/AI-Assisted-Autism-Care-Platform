@@ -1,0 +1,18 @@
+{
+  "model_type": "1D_CNN",
+  "architecture": "Conv1D(32)\u2192Conv1D(64)\u2192GAP\u2192Dense(32)\u2192Dense(1)",
+  "dataset": "synthetic_eeg_bandpower",
+  "n_samples": 500,
+  "n_features": 20,
+  "accuracy": 0.98,
+  "auc": 1.0,
+  "eeg_markers": [
+    "theta_beta_ratio",
+    "alpha_asymmetry",
+    "spectral_entropy",
+    "band_power_distribution",
+    "hjorth_parameters",
+    "coherence"
+  ],
+  "note": "Trained on synthetic data with ASD-correlated EEG patterns from literature"
+}

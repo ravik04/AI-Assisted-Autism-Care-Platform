@@ -1,0 +1,21 @@
+{
+  "model_type": "CNN_GRU",
+  "architecture": "Conv1D(64)\u2192Conv1D(128)\u2192MaxPool\u2192GRU(64)\u2192GRU(32)\u2192Dense(64)\u2192Dense(1)",
+  "dataset": "synthetic_audio_features",
+  "n_samples": 600,
+  "n_features": 40,
+  "n_timesteps": 20,
+  "accuracy": 0.5,
+  "auc": 0.1256,
+  "loss": 1.5586,
+  "seed": 42,
+  "audio_markers": [
+    "pitch_variability",
+    "pause_ratio",
+    "speech_rate",
+    "jitter",
+    "mfcc_profile",
+    "spectral_features"
+  ],
+  "note": "Trained on synthetic data with ASD-correlated prosody patterns from literature"
+}

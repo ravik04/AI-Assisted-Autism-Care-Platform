@@ -1,7 +1,7 @@
 """
-Autism AI Screening — FastAPI Backend (v4 Multi-Modal)
-=====================================================
-REST API serving 5 trained models + 4 cooperative agents.
+Autism AI Screening — FastAPI Backend (v5 Full-Stack Multi-Modal)
+================================================================
+REST API serving 8 trained models + 4 cooperative agents + consent + RLHF.
 
 Models:
   1. Face Classifier      (MobileNetV2, .keras)
@@ -10,22 +10,36 @@ Models:
   4. Eye-Tracking XGB     (XGBoost, .pkl)
   5. Pose/Skeleton XGB    (XGBoost, .pkl)
   6. CARS Severity Ridge  (Ridge regression, .pkl) — enrichment
+  7. Audio/Speech CNN+GRU (.keras) — prosody & vocalization
+  8. EEG Neural 1D-CNN    (.keras) — brainwave patterns
+  9. Attention Fusion     (.keras) — learned multi-modal fusion
 
 Endpoints:
-  POST /api/analyze          — image/video → face + behavior scores + agents
-  POST /api/questionnaire    — screening questionnaire → risk score + agents
-  POST /api/fuse             — combine all modality scores → full pipeline
-  GET  /api/history          — score history
-  POST /api/clear            — reset history
-  GET  /api/status           — model status
-  GET  /api/model-info       — metadata for all models
+  POST /api/analyze           — image/video → face + behavior scores + agents
+  POST /api/questionnaire     — screening questionnaire → risk score + agents
+  POST /api/analyze-audio     — audio file → speech/prosody analysis
+  POST /api/analyze-eeg       — EEG CSV file → neural signal analysis
+  POST /api/fuse              — combine all modality scores → full pipeline
+  GET  /api/history           — score history
+  POST /api/clear             — reset history
+  GET  /api/status            — model status
+  GET  /api/model-info        — metadata for all models
+  POST /api/consent           — grant consent
+  GET  /api/consent/{child_id} — get consent status
+  DELETE /api/consent/{child_id} — revoke consent
+  POST /api/feedback          — submit RLHF feedback
+  GET  /api/feedback/summary  — aggregate feedback stats
+  POST /api/children          — create child profile
+  GET  /api/children          — list all children
+  GET  /api/children/{id}     — get child profile
+  GET  /api/explain           — get screening explanation
 """
 
 import os, sys, io, json, base64, tempfile
 import numpy as np
 import tensorflow as tf
 from PIL import Image
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict, List
@@ -42,6 +56,16 @@ from agents.monitoring_agent import monitoring_agent
 from utils.gradcam import make_gradcam_heatmap, overlay_gradcam
 from utils.logger import save_result
 from utils.llm_client import is_llm_available
+from utils.consent import grant_consent, revoke_consent, get_consent_summary, check_consent, CONSENT_CATEGORIES
+from utils.feedback import submit_feedback, get_feedback_summary, get_reward_signal
+from utils.storage import create_child, get_child, list_children, update_child, save_session, get_sessions, get_longitudinal_data
+from utils.explainability import explain_screening_result, compute_feature_importance
+from utils.audio_features import extract_audio_features, N_FEATURES as AUDIO_N_FEATURES
+from utils.eeg_features import extract_eeg_features, N_FEATURES as EEG_N_FEATURES
+from models.attention_fusion import (
+    prepare_fusion_input, fallback_fusion, MODALITY_NAMES,
+    ModalityEmbedding, MaskAndMultiply, CrossModalAttention, WeightedFusionAggregation
+)
 
 # ── Paths ──────────────────────────────────────────────────────────────
 MODELS_DIR = os.path.join(PROJECT_DIR, "saved_models")
@@ -50,8 +74,8 @@ IMG_SIZE = (224, 224)
 # ── FastAPI App ────────────────────────────────────────────────────────
 app = FastAPI(
     title="Autism AI Multi-Modal Screening API",
-    description="5-model, 4-agent developmental screening pipeline",
-    version="4.0.0",
+    description="8-model, 4-agent developmental screening pipeline with consent & RLHF",
+    version="5.0.0",
 )
 app.add_middleware(
     CORSMiddleware,
@@ -78,6 +102,14 @@ pose_meta = None
 cars_model = None
 cars_scaler = None
 cars_meta = None
+audio_model = None
+audio_scaler = None
+audio_meta = None
+eeg_model = None
+eeg_scaler = None
+eeg_meta = None
+fusion_model = None
+fusion_meta = None
 
 
 def _load_pkl(name):
@@ -103,6 +135,9 @@ def load_models():
     global eye_tracking_model, eye_tracking_scaler, eye_tracking_meta
     global pose_model, pose_scaler, pose_meta
     global cars_model, cars_scaler, cars_meta
+    global audio_model, audio_scaler, audio_meta
+    global eeg_model, eeg_scaler, eeg_meta
+    global fusion_model, fusion_meta
 
     print("\n╔══════════════════════════════════════════════╗")
     print("║  Loading Autism AI Multi-Modal Models...     ║")
@@ -155,6 +190,35 @@ def load_models():
     cars_meta = _load_json("eye_tracking_cars_metadata.json")
     print(f"  {'✓' if cars_model else '✗'} CARS Severity Ridge")
 
+    # 7) Audio/Speech CNN+GRU
+    ap = os.path.join(MODELS_DIR, "audio_speech_model.keras")
+    if os.path.exists(ap):
+        audio_model = tf.keras.models.load_model(ap)
+        print("  ✓ Audio/Speech CNN+GRU loaded")
+    else:
+        print("  ✗ Audio/Speech model not found")
+    audio_scaler = _load_pkl("audio_speech_scaler.pkl")
+    audio_meta = _load_json("audio_speech_metadata.json")
+
+    # 8) EEG Neural 1D-CNN
+    ep = os.path.join(MODELS_DIR, "eeg_neural_model.keras")
+    if os.path.exists(ep):
+        eeg_model = tf.keras.models.load_model(ep)
+        print("  ✓ EEG Neural 1D-CNN loaded")
+    else:
+        print("  ✗ EEG Neural model not found")
+    eeg_scaler = _load_pkl("eeg_neural_scaler.pkl")
+    eeg_meta = _load_json("eeg_neural_metadata.json")
+
+    # 9) Attention Fusion
+    afp = os.path.join(MODELS_DIR, "attention_fusion.keras")
+    if os.path.exists(afp):
+        fusion_model = tf.keras.models.load_model(afp)
+        print("  ✓ Attention Fusion loaded")
+    else:
+        print("  ✗ Attention Fusion model not found (using fallback weights)")
+    fusion_meta = _load_json("attention_fusion_metadata.json")
+
     print("\n  All models loaded.\n")
 
 
@@ -188,23 +252,15 @@ def _run_agent_pipeline(fused_score: float, modality_scores: dict, domain_profil
 
 
 def _fuse_scores(modality_scores: dict) -> float:
-    """Weighted fusion of available modality scores."""
-    weights = {
-        "face": 0.25,
-        "behavior": 0.15,
-        "questionnaire": 0.30,
-        "eye_tracking": 0.15,
-        "pose": 0.15,
-    }
-    total_w = 0.0
-    weighted_sum = 0.0
-    for mod, score in modality_scores.items():
-        if score is not None and mod in weights:
-            weighted_sum += weights[mod] * score
-            total_w += weights[mod]
-    if total_w == 0:
-        return 0.5
-    return float(np.clip(weighted_sum / total_w, 0, 1))
+    """Learned attention fusion with fallback to weighted averaging."""
+    if fusion_model is not None:
+        try:
+            x = prepare_fusion_input(modality_scores)
+            pred = fusion_model.predict(x, verbose=0)[0][0]
+            return float(np.clip(pred, 0, 1))
+        except Exception as e:
+            print(f"Fusion model error, using fallback: {e}")
+    return fallback_fusion(modality_scores)
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -357,6 +413,8 @@ class FuseRequest(BaseModel):
     questionnaire: Optional[float] = None
     eye_tracking: Optional[float] = None
     pose: Optional[float] = None
+    audio: Optional[float] = None
+    eeg: Optional[float] = None
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -373,6 +431,9 @@ def status():
             "eye_tracking_xgb": eye_tracking_model is not None,
             "pose_skeleton_xgb": pose_model is not None,
             "cars_severity": cars_model is not None,
+            "audio_speech": audio_model is not None,
+            "eeg_neural": eeg_model is not None,
+            "attention_fusion": fusion_model is not None,
         },
         "feature_extractor": feature_extractor is not None,
         "sessions": len(score_history),
@@ -382,6 +443,16 @@ def status():
                         else "v2 — enhanced template (set OPENAI_API_KEY for LLM)",
             "therapy": "v2 — RAG knowledge base" + (" + LLM personalization" if is_llm_available() else ""),
             "monitoring": "v2 — EWMA + linear forecast + CUSUM change-point",
+        },
+        "features": {
+            "consent_management": True,
+            "rlhf_feedback": True,
+            "child_profiles": True,
+            "explainability": True,
+            "attention_fusion": fusion_model is not None,
+            "audio_analysis": audio_model is not None,
+            "eeg_analysis": eeg_model is not None,
+            "neurodiversity_affirming": True,
         },
         "llm_available": is_llm_available(),
     }
@@ -415,6 +486,27 @@ def model_info():
             "mae": cars_meta.get("loo_mae"),
             "r2": cars_meta.get("loo_r2"),
             "severity_accuracy": cars_meta.get("severity_accuracy"),
+        }
+    if audio_meta:
+        info["audio_speech"] = {
+            "architecture": audio_meta.get("architecture"),
+            "accuracy": audio_meta.get("accuracy"),
+            "n_features": audio_meta.get("n_features"),
+        }
+    if eeg_meta:
+        info["eeg_neural"] = {
+            "architecture": eeg_meta.get("architecture"),
+            "accuracy": eeg_meta.get("accuracy"),
+            "auc": eeg_meta.get("auc"),
+            "n_features": eeg_meta.get("n_features"),
+        }
+    if fusion_meta:
+        info["attention_fusion"] = {
+            "architecture": fusion_meta.get("architecture"),
+            "accuracy": fusion_meta.get("accuracy"),
+            "auc": fusion_meta.get("auc"),
+            "modalities": fusion_meta.get("modalities"),
+            "handles_missing": fusion_meta.get("handles_missing_modalities"),
         }
     return info
 
@@ -512,12 +604,23 @@ def fuse_modalities(req: FuseRequest):
         modality_scores["eye_tracking"] = req.eye_tracking
     if req.pose is not None:
         modality_scores["pose"] = req.pose
+    if req.audio is not None:
+        modality_scores["audio"] = req.audio
+    if req.eeg is not None:
+        modality_scores["eeg"] = req.eeg
 
     if not modality_scores:
         raise HTTPException(400, "At least one modality score required")
 
     fused = _fuse_scores(modality_scores)
     s_out, c_out, t_out, m_out = _run_agent_pipeline(fused, modality_scores)
+
+    # Explainability
+    explanation = explain_screening_result(
+        modality_scores, fused,
+        s_out.get("risk_level", "moderate") if isinstance(s_out, dict) else "moderate",
+    )
+    feature_importance = compute_feature_importance(modality_scores)
 
     return {
         "fused_score": round(fused, 4),
@@ -526,6 +629,8 @@ def fuse_modalities(req: FuseRequest):
         "clinical": c_out,
         "therapy": t_out,
         "monitoring": m_out,
+        "explanation": explanation,
+        "feature_importance": feature_importance,
         "score_history": list(score_history),
     }
 
@@ -544,6 +649,255 @@ def clear_history():
     score_history.clear()
     modality_history.clear()
     return {"status": "cleared"}
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  AUDIO / SPEECH ANALYSIS
+# ══════════════════════════════════════════════════════════════════════
+
+@app.post("/api/analyze-audio")
+async def analyze_audio(file: UploadFile = File(None), use_synthetic: bool = True):
+    """Analyze audio/speech for autism-related prosody markers."""
+    result = None
+
+    if file is not None:
+        file_bytes = await file.read()
+        try:
+            result = extract_audio_features(file_bytes)
+        except Exception as e:
+            print(f"Audio feature extraction error: {e}")
+
+    if result is None and use_synthetic:
+        from utils.audio_features import _synthetic_features
+        result = _synthetic_features()
+
+    if result is None:
+        raise HTTPException(400, "Could not extract audio features. Upload a WAV file or set use_synthetic=true.")
+
+    features = np.asarray(result["features"], dtype=np.float32)
+    prosody = result.get("prosody_summary", {})
+
+    audio_score = 0.5
+    if audio_model is not None and audio_scaler is not None:
+        scaled = audio_scaler.transform(features.reshape(1, -1))
+        # Reshape for CNN+GRU: (1, timesteps, features) — repeat to create sequence
+        n_timesteps = 20
+        seq = np.tile(scaled, (1, n_timesteps, 1)).reshape(1, n_timesteps, -1)
+        pred = audio_model.predict(seq, verbose=0)[0][0]
+        audio_score = float(np.clip(pred, 0, 1))
+    elif audio_model is not None:
+        seq = np.tile(features.reshape(1, -1), (1, 20, 1)).reshape(1, 20, -1).astype(np.float32)
+        pred = audio_model.predict(seq, verbose=0)[0][0]
+        audio_score = float(np.clip(pred, 0, 1))
+
+    modality_scores = {"audio": round(audio_score, 4)}
+    fused = _fuse_scores(modality_scores)
+    s_out, c_out, t_out, m_out = _run_agent_pipeline(fused, modality_scores)
+
+    return {
+        "audio_score": round(audio_score, 4),
+        "fused_score": round(fused, 4),
+        "modality_scores": modality_scores,
+        "feature_summary": {
+            "n_features": len(features),
+            "pitch_variability": prosody.get("pitch_variability", 0),
+            "pause_ratio": prosody.get("pause_ratio_pct", 0),
+            "speech_rate": prosody.get("speech_rate_syl_per_sec", 0),
+        },
+        "screening": s_out,
+        "clinical": c_out,
+        "therapy": t_out,
+        "monitoring": m_out,
+        "score_history": list(score_history),
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  EEG / NEURAL SIGNAL ANALYSIS
+# ══════════════════════════════════════════════════════════════════════
+
+@app.post("/api/analyze-eeg")
+async def analyze_eeg(file: UploadFile = File(None), use_synthetic: bool = True):
+    """Analyze EEG data for autism-related neural signatures."""
+    result = None
+
+    if file is not None:
+        file_bytes = await file.read()
+        try:
+            # Save temp CSV and extract
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as tmp:
+                tmp.write(file_bytes)
+                tmp_path = tmp.name
+            result = extract_eeg_features(tmp_path)
+            os.unlink(tmp_path)
+        except Exception as e:
+            print(f"EEG feature extraction error: {e}")
+
+    if result is None and use_synthetic:
+        from utils.eeg_features import _synthetic_eeg_features
+        result = _synthetic_eeg_features()
+
+    if result is None:
+        raise HTTPException(400, "Could not extract EEG features. Upload a CSV file or set use_synthetic=true.")
+
+    features = np.asarray(result["features"], dtype=np.float32)
+    band_powers = result.get("band_powers", {})
+
+    eeg_score = 0.5
+    if eeg_model is not None and eeg_scaler is not None:
+        scaled = eeg_scaler.transform(features.reshape(1, -1))
+        inp = scaled.reshape(1, -1, 1).astype(np.float32)
+        pred = eeg_model.predict(inp, verbose=0)[0][0]
+        eeg_score = float(np.clip(pred, 0, 1))
+    elif eeg_model is not None:
+        inp = features.reshape(1, -1, 1).astype(np.float32)
+        pred = eeg_model.predict(inp, verbose=0)[0][0]
+        eeg_score = float(np.clip(pred, 0, 1))
+
+    modality_scores = {"eeg": round(eeg_score, 4)}
+    fused = _fuse_scores(modality_scores)
+    s_out, c_out, t_out, m_out = _run_agent_pipeline(fused, modality_scores)
+
+    return {
+        "eeg_score": round(eeg_score, 4),
+        "fused_score": round(fused, 4),
+        "modality_scores": modality_scores,
+        "feature_summary": {
+            "n_features": len(features),
+            "theta_power": band_powers.get("theta", 0),
+            "alpha_power": band_powers.get("alpha", 0),
+            "theta_beta_ratio": round(float(features[5]) if len(features) > 5 else 0, 4),
+        },
+        "screening": s_out,
+        "clinical": c_out,
+        "therapy": t_out,
+        "monitoring": m_out,
+        "score_history": list(score_history),
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  CONSENT MANAGEMENT
+# ══════════════════════════════════════════════════════════════════════
+
+class ConsentRequest(BaseModel):
+    child_id: str
+    guardian_name: str
+    guardian_email: Optional[str] = None
+    categories: List[str] = []
+
+@app.post("/api/consent")
+def create_consent(req: ConsentRequest):
+    """Grant consent for data processing categories."""
+    record = grant_consent(
+        child_id=req.child_id,
+        guardian_name=req.guardian_name,
+        categories=req.categories if req.categories else CONSENT_CATEGORIES,
+        guardian_email=req.guardian_email,
+    )
+    return record
+
+@app.get("/api/consent/{child_id}")
+def get_consent_status(child_id: str):
+    """Get current consent status for a child."""
+    return get_consent_summary(child_id)
+
+@app.delete("/api/consent/{child_id}")
+def delete_consent(child_id: str):
+    """Revoke all consent for a child."""
+    return revoke_consent(child_id)
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  RLHF FEEDBACK
+# ══════════════════════════════════════════════════════════════════════
+
+class FeedbackRequest(BaseModel):
+    session_id: str
+    feedback_type: str = "screening"
+    rating: str = "neutral"
+    comment: Optional[str] = None
+    child_id: Optional[str] = None
+    user_role: str = "clinician"
+    corrections: Optional[Dict] = None
+
+@app.post("/api/feedback")
+def post_feedback(req: FeedbackRequest):
+    """Submit feedback on AI recommendations for RLHF."""
+    record = submit_feedback(
+        session_id=req.session_id,
+        feedback_type=req.feedback_type,
+        rating=req.rating,
+        comment=req.comment,
+        child_id=req.child_id,
+        user_role=req.user_role,
+        corrections=req.corrections,
+    )
+    return record
+
+@app.get("/api/feedback/summary")
+def feedback_summary():
+    """Get aggregated feedback statistics."""
+    return get_feedback_summary()
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  CHILD PROFILES
+# ══════════════════════════════════════════════════════════════════════
+
+class ChildRequest(BaseModel):
+    name: str
+    age_months: int
+    guardian_name: str
+    notes: Optional[str] = None
+
+@app.post("/api/children")
+def create_child_profile(req: ChildRequest):
+    """Create a new child profile."""
+    return create_child(
+        name=req.name,
+        age_months=req.age_months,
+        guardian_name=req.guardian_name,
+        notes=req.notes,
+    )
+
+@app.get("/api/children")
+def list_all_children():
+    """List all child profiles."""
+    return list_children()
+
+@app.get("/api/children/{child_id}")
+def get_child_profile(child_id: str):
+    """Get a child profile by ID."""
+    child = get_child(child_id)
+    if child is None:
+        raise HTTPException(404, "Child not found")
+    sessions = get_sessions(child_id)
+    longitudinal = get_longitudinal_data(child_id)
+    return {**child, "sessions": sessions, "longitudinal": longitudinal}
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  EXPLAINABILITY
+# ══════════════════════════════════════════════════════════════════════
+
+class ExplainRequest(BaseModel):
+    modality_scores: Dict[str, float]
+    fused_score: float
+    risk_level: str = "moderate"
+    child_age_months: Optional[int] = None
+
+@app.post("/api/explain")
+def explain_result(req: ExplainRequest):
+    """Get detailed explainability report for a screening result."""
+    explanation = explain_screening_result(
+        modality_scores=req.modality_scores,
+        fused_score=req.fused_score,
+        risk_level=req.risk_level,
+        child_age_months=req.child_age_months,
+    )
+    importance = compute_feature_importance(req.modality_scores)
+    return {"explanation": explanation, "feature_importance": importance}
 
 
 # ── Serve frontend (for single-origin deployment on Render, etc.) ──────
