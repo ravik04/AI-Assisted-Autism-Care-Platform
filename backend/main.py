@@ -35,14 +35,17 @@ Endpoints:
   GET  /api/explain           — get screening explanation
 """
 
-import os, sys, io, json, base64, tempfile
+import os, sys, io, json, base64, tempfile, hashlib, secrets
+from datetime import datetime, timedelta, timezone
 import numpy as np
 import tensorflow as tf
 from PIL import Image
-from fastapi import FastAPI, UploadFile, File, HTTPException, Form
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import Optional, Dict, List
+import jwt as pyjwt
 
 # ── Project imports ────────────────────────────────────────────────────
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -84,6 +87,109 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  JWT AUTHENTICATION
+# ══════════════════════════════════════════════════════════════════════
+JWT_SECRET = os.environ.get("JWT_SECRET", "autism-care-ai-secret-key-change-in-prod")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRE_HOURS = 72
+
+# Simple JSON-based user store (for prototype)
+USERS_FILE = os.path.join(PROJECT_DIR, "data", "users.json")
+
+def _load_users():
+    if os.path.exists(USERS_FILE):
+        with open(USERS_FILE) as f:
+            return json.load(f)
+    return {}
+
+def _save_users(users):
+    os.makedirs(os.path.dirname(USERS_FILE), exist_ok=True)
+    with open(USERS_FILE, "w") as f:
+        json.dump(users, f, indent=2)
+
+def _hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def _create_token(user_id: str, name: str, email: str, role: str) -> str:
+    payload = {
+        "user_id": user_id,
+        "name": name,
+        "email": email,
+        "role": role,
+        "iat": datetime.now(timezone.utc),
+        "exp": datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRE_HOURS),
+    }
+    return pyjwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+security = HTTPBearer(auto_error=False)
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Optional JWT auth — returns user dict or None."""
+    if not credentials:
+        return None
+    try:
+        payload = pyjwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return payload
+    except pyjwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except pyjwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+
+class AuthLoginRequest(BaseModel):
+    email: str
+    password: str
+
+class AuthRegisterRequest(BaseModel):
+    name: str
+    email: str
+    password: str
+    role: str = "parent"
+
+
+@app.post("/api/auth/register")
+def auth_register(req: AuthRegisterRequest):
+    """Register a new user."""
+    users = _load_users()
+    if req.email in users:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    if req.role not in ("parent", "clinician", "therapist"):
+        raise HTTPException(status_code=400, detail="Invalid role")
+    user_id = secrets.token_hex(4)
+    users[req.email] = {
+        "id": user_id,
+        "name": req.name,
+        "email": req.email,
+        "role": req.role,
+        "password_hash": _hash_password(req.password),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    _save_users(users)
+    token = _create_token(user_id, req.name, req.email, req.role)
+    return {"token": token, "user": {"id": user_id, "name": req.name, "email": req.email, "role": req.role}}
+
+
+@app.post("/api/auth/login")
+def auth_login(req: AuthLoginRequest):
+    """Authenticate and return JWT."""
+    users = _load_users()
+    user = users.get(req.email)
+    if not user or user["password_hash"] != _hash_password(req.password):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    token = _create_token(user["id"], user["name"], user["email"], user["role"])
+    return {"token": token, "user": {"id": user["id"], "name": user["name"], "email": user["email"], "role": user["role"]}}
+
+
+@app.get("/api/auth/me")
+def auth_me(current_user=Depends(get_current_user)):
+    """Get current user from JWT."""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return {"user_id": current_user["user_id"], "name": current_user["name"], "email": current_user["email"], "role": current_user["role"]}
+
 
 # ── Global model references ───────────────────────────────────────────
 face_model = None
@@ -635,6 +741,88 @@ def fuse_modalities(req: FuseRequest):
     }
 
 
+# ══════════════════════════════════════════════════════════════════════
+#  MULTI-FILE UPLOAD (for Parent multi-image/video)
+# ══════════════════════════════════════════════════════════════════════
+
+@app.post("/api/analyze-multi")
+async def analyze_multiple(files: List[UploadFile] = File(...)):
+    """Analyze multiple images/videos and return aggregated results."""
+    if not files:
+        raise HTTPException(400, "No files provided")
+    if len(files) > 10:
+        raise HTTPException(400, "Maximum 10 files allowed")
+
+    all_results = []
+    face_scores = []
+    behavior_scores = []
+
+    for f in files:
+        file_bytes = await f.read()
+        try:
+            img = Image.open(io.BytesIO(file_bytes)).convert("RGB").resize(IMG_SIZE)
+            img_array = np.expand_dims(np.array(img) / 255.0, axis=0).astype(np.float32)
+            is_video = False
+        except Exception:
+            is_video = True
+            img_array = None
+
+        file_result = {"filename": f.filename, "type": "video" if is_video else "image"}
+
+        if not is_video and face_model is not None:
+            face_pred = float(face_model.predict(img_array, verbose=0)[0][0])
+            file_result["face_score"] = face_pred
+            face_scores.append(face_pred)
+
+        if not is_video and behavior_model is not None:
+            try:
+                frames = np.stack([img_array[0]] * 10)
+                if feature_extractor and gap_layer:
+                    feats = gap_layer.predict(feature_extractor.predict(frames, verbose=0), verbose=0)
+                    seq = np.expand_dims(feats, axis=0)
+                    beh_pred = float(behavior_model.predict(seq, verbose=0)[0][0])
+                    file_result["behavior_score"] = beh_pred
+                    behavior_scores.append(beh_pred)
+            except Exception:
+                pass
+
+        all_results.append(file_result)
+
+    # Aggregate
+    avg_face = float(np.mean(face_scores)) if face_scores else None
+    avg_behavior = float(np.mean(behavior_scores)) if behavior_scores else None
+
+    modalities = {}
+    if avg_face is not None:
+        modalities["face"] = avg_face
+    if avg_behavior is not None:
+        modalities["behavior"] = avg_behavior
+
+    # Run agents on aggregated scores
+    fused = np.mean([v for v in modalities.values() if v is not None]) if modalities else 0.5
+    score_history.append(fused)
+    modality_history.append(modalities)
+
+    screening = screening_agent(fused, modalities)
+    clinical = clinical_agent(screening, modalities)
+    therapy = therapy_agent(clinical, modalities)
+    monitoring = monitoring_agent(list(score_history), list(modality_history))
+
+    return {
+        "per_file_results": all_results,
+        "aggregated_face_score": avg_face,
+        "aggregated_behavior_score": avg_behavior,
+        "fused_score": fused,
+        "modality_scores": modalities,
+        "screening": screening,
+        "clinical": clinical,
+        "therapy": therapy,
+        "monitoring": monitoring,
+        "files_processed": len(all_results),
+        "score_history": list(score_history),
+    }
+
+
 @app.get("/api/history")
 def get_history():
     return {
@@ -900,17 +1088,25 @@ def explain_result(req: ExplainRequest):
     return {"explanation": explanation, "feature_importance": importance}
 
 
-# ── Serve frontend (for single-origin deployment on Render, etc.) ──────
+# ── Serve frontend (React SPA build, fallback to old vanilla) ──────────
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-FRONTEND_DIR = os.path.join(PROJECT_DIR, "frontend")
-if os.path.isdir(FRONTEND_DIR):
-    @app.get("/")
-    async def serve_index():
-        return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+REACT_DIR = os.path.join(PROJECT_DIR, "frontend-react", "dist")
+LEGACY_DIR = os.path.join(PROJECT_DIR, "frontend")
+FRONTEND_DIR = REACT_DIR if os.path.isdir(REACT_DIR) else LEGACY_DIR
 
-    app.mount("/", StaticFiles(directory=FRONTEND_DIR), name="frontend")
+if os.path.isdir(FRONTEND_DIR):
+    # Serve static assets (js, css, images, etc.)
+    app.mount("/assets", StaticFiles(directory=os.path.join(FRONTEND_DIR, "assets")), name="assets") if os.path.isdir(os.path.join(FRONTEND_DIR, "assets")) else None
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        """Serve React SPA – return index.html for all non-API routes."""
+        file_path = os.path.join(FRONTEND_DIR, full_path)
+        if full_path and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
 
 
 # ── Run directly ───────────────────────────────────────────────────────
